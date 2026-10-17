@@ -9,4 +9,4 @@ Nepali-English document intelligence MVP. The initial slice includes a bilingual
 3. Open http://localhost:5173.
 
 The API docs are at http://localhost:8000/docs. The first version uses a demo local user so the document flow can be explored. Before multi-user deployment, replace demo auth with registration/login and enforce ownership on every document operation.
-# DOCUSATHI
+
