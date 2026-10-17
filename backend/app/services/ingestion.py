@@ -10,7 +10,15 @@ from app.models.entities import Chunk, Document
 def extract_pages(path: Path, suffix: str) -> list[tuple[int | None, str]]:
     if suffix == ".pdf":
         with fitz.open(path) as pdf:
-            return [(index + 1, page.get_text("text").strip()) for index, page in enumerate(pdf)]
+            pages = []
+            for index, page in enumerate(pdf):
+                text = page.get_text("text").strip()
+                # Scanned PDFs have no text layer. OCR only those pages so text PDFs
+                # keep the fast native extraction path.
+                if not text and page.get_images():
+                    text = page.get_textpage_ocr(language="eng+nep", dpi=150).extractText().strip()
+                pages.append((index + 1, text))
+            return pages
     doc = DocxDocument(path)
     paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
     return [(None, "\n".join(paragraphs))]
@@ -40,8 +48,12 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
 
 async def index_document(db: AsyncSession, document: Document, path: Path, suffix: str):
     try:
+        if not path.is_file():
+            raise FileNotFoundError("The stored upload is missing")
         pages = await asyncio.to_thread(extract_pages, path, suffix)
         all_text = [chunk for _, text in pages for chunk in split_text(text)]
+        if not all_text:
+            raise ValueError("No text could be extracted. The PDF may be blank or unreadable.")
         vectors = await asyncio.to_thread(embed_texts, all_text) if all_text else []
         rows, i = [], 0
         for page_number, text in pages:

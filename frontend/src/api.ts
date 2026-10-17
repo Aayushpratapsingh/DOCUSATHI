@@ -28,6 +28,7 @@ export const api = {
   recentChats: () => request<RecentChat[]>('/api/conversations/recent'),
   rename: (id:number,filename:string) => request<DocumentItem>(`/api/documents/${id}`,{method:'PATCH',body:JSON.stringify({filename})}),
   upload: (file:File) => {const form=new FormData(); form.append('file',file); return request<DocumentItem>('/api/documents',{method:'POST',body:form})},
+  retry: (id:number) => request<DocumentItem>(`/api/documents/${id}/retry`,{method:'POST'}),
   remove: (id:number) => request<void>(`/api/documents/${id}`,{method:'DELETE'}),
   ask: (id:number,question:string) => request<Answer>(`/api/documents/${id}/ask`,{method:'POST',body:JSON.stringify({question})}),
   messages: (id:number) => request<ChatMessage[]>(`/api/documents/${id}/messages`),

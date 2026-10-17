@@ -1,4 +1,5 @@
 from pathlib import Path
+import logging
 from uuid import uuid4
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from sqlalchemy import func, select
@@ -12,6 +13,7 @@ from app.services.ingestion import index_document
 from app.services.answering import answer, retrieve, translate_to_nepali
 
 router = APIRouter(prefix="/api")
+logger = logging.getLogger(__name__)
 
 @router.post("/auth/register", response_model=TokenOut)
 async def register(body: RegisterIn, db: AsyncSession = Depends(get_db)):
@@ -50,8 +52,10 @@ async def process_in_background(document_id: int, path: Path, suffix: str):
     async with SessionLocal() as db:
         document = await db.get(Document, document_id)
         if document:
-            try: await index_document(db, document, path, suffix)
-            except Exception: pass
+            try:
+                await index_document(db, document, path, suffix)
+            except Exception:
+                logger.exception("Document indexing failed for document_id=%s", document_id)
 
 @router.get("/documents", response_model=list[DocumentOut])
 async def list_documents(db: AsyncSession = Depends(get_db), user: User = Depends(current_user)):
@@ -88,6 +92,23 @@ async def upload_document(background: BackgroundTasks, file: UploadFile = File(.
     doc = Document(user_id=user.id, filename=Path(file.filename or safe_name).name, file_type=suffix[1:], storage_path=str(path), processing_status="processing")
     db.add(doc); await db.commit(); await db.refresh(doc)
     background.add_task(process_in_background, doc.id, path, suffix)
+    return doc
+
+@router.post("/documents/{document_id}/retry", response_model=DocumentOut, status_code=202)
+async def retry_document(document_id: int, background: BackgroundTasks, db: AsyncSession = Depends(get_db), user: User = Depends(current_user)):
+    doc = await db.scalar(select(Document).where(Document.id == document_id, Document.user_id == user.id))
+    if not doc:
+        raise HTTPException(404, "Document not found")
+    if doc.processing_status == "processing":
+        raise HTTPException(409, "Document is already processing")
+    path = Path(doc.storage_path)
+    if not path.is_file():
+        raise HTTPException(404, "The original upload is missing. Please upload the document again.")
+    doc.processing_status = "processing"
+    doc.page_count = 0
+    await db.commit()
+    await db.refresh(doc)
+    background.add_task(process_in_background, doc.id, path, f".{doc.file_type.lower()}")
     return doc
 
 @router.patch("/documents/{document_id}", response_model=DocumentOut)
