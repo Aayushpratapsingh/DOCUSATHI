@@ -1,0 +1,3 @@
+export default function BrandSymbol() {
+  return <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 15c4-1.5 8-.8 15 2.8v17.5c-5.7-3-10.4-3.6-15-2V15Zm34 0c-4-1.5-8-.8-15 2.8v17.5c5.7-3 10.4-3.6 15-2V15Z" fill="white"/><path d="M24 18v17M11 25c3-.7 6-.2 8 1m-8 3c3-.7 6-.2 8 1m18-5c-3-.7-6-.2-8 1m8 2c-3-.7-6-.2-8 1" fill="none" stroke="#356b4b" strokeLinecap="round" strokeWidth="1.7"/><text x="10.5" y="23" fill="#356b4b" fontFamily="Noto Sans Devanagari, sans-serif" fontSize="7.5" fontWeight="700">अ</text><text x="29" y="23" fill="#356b4b" fontFamily="DM Sans, sans-serif" fontSize="8" fontWeight="800">A</text><path d="m38 5 1.4 3.5L43 10l-3.6 1.4L38 15l-1.4-3.6L33 10l3.6-1.5L38 5Z" fill="#e6ae46"/></svg>
+}
