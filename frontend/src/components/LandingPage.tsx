@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { AnimatePresence, LazyMotion, domAnimation, m as motion, useInView, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'motion/react'
-import { ArrowDown, ArrowRight, BookOpenText, Check, FileText, GraduationCap, Languages, Menu, MessageCircleQuestion, MessageSquareText, Microscope, PanelTop, Plus, ShieldCheck, Sparkles, Target, X } from 'lucide-react'
+import { ArrowDown, ArrowRight, BookOpenText, Check, FileText, GraduationCap, Languages, Menu, MessageCircleQuestion, MessageSquareText, Microscope, Moon, PanelTop, Plus, ShieldCheck, Sparkles, Sun, Target, X } from 'lucide-react'
 import BrandSymbol from './BrandSymbol'
 import { FadeUp, FloatingCard, StaggerContainer, StaggerItem } from './animations'
 
@@ -24,7 +24,7 @@ function LanguageSwitch() {
   </div>
 }
 
-export function Navbar() {
+export function Navbar({ darkMode, onToggleTheme }: { darkMode: boolean; onToggleTheme: () => void }) {
   const { t } = useTranslation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -42,9 +42,9 @@ export function Navbar() {
       <a className="landing-home" href="#top" aria-label="DocuSathi AI home"><BrandLockup /></a>
       <nav className={`landing-links ${menuOpen ? 'open' : ''}`} aria-label={t('mainNavigation')}>
         {links.map(([href, label]) => <a key={href} href={href} onClick={() => setMenuOpen(false)}>{label}</a>)}
-        <div className="landing-mobile-actions"><LanguageSwitch /><Link className="landing-login" to="/login" onClick={() => setMenuOpen(false)}>{t('landingLogin')}</Link><Link className="landing-button small" to="/signup" onClick={() => setMenuOpen(false)}>{t('landingGetStarted')}<ArrowRight size={15}/></Link></div>
+        <div className="landing-mobile-actions"><LanguageSwitch /><button className="landing-theme-toggle" type="button" aria-label={t(darkMode ? 'landingLightMode' : 'landingDarkMode')} title={t(darkMode ? 'landingLightMode' : 'landingDarkMode')} onClick={onToggleTheme}>{darkMode ? <Sun size={16}/> : <Moon size={16}/>}</button><Link className="landing-login" to="/login" onClick={() => setMenuOpen(false)}>{t('landingLogin')}</Link><Link className="landing-button small" to="/signup" onClick={() => setMenuOpen(false)}>{t('landingGetStarted')}<ArrowRight size={15}/></Link></div>
       </nav>
-      <div className="landing-nav-actions"><LanguageSwitch /><Link className="landing-login" to="/login">{t('landingLogin')}</Link><Link className="landing-button small" to="/signup">{t('landingGetStarted')}<ArrowRight size={15}/></Link></div>
+      <div className="landing-nav-actions"><LanguageSwitch /><button className="landing-theme-toggle" type="button" aria-label={t(darkMode ? 'landingLightMode' : 'landingDarkMode')} title={t(darkMode ? 'landingLightMode' : 'landingDarkMode')} onClick={onToggleTheme}>{darkMode ? <Sun size={16}/> : <Moon size={16}/>}</button><Link className="landing-login" to="/login">{t('landingLogin')}</Link><Link className="landing-button small" to="/signup">{t('landingGetStarted')}<ArrowRight size={15}/></Link></div>
       <button className="landing-menu-toggle" aria-label={menuOpen ? t('landingCloseMenu') : t('landingOpenMenu')} aria-expanded={menuOpen} onClick={() => setMenuOpen(open => !open)}>{menuOpen ? <X size={21}/> : <Menu size={21}/>}</button>
     </div>
   </motion.header>
@@ -252,10 +252,16 @@ export function Footer() {
 
 export default function LandingPage() {
   const { t, i18n } = useTranslation()
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('docintel_landing_theme') === 'dark')
+  const toggleTheme = () => setDarkMode(current => {
+    const next = !current
+    localStorage.setItem('docintel_landing_theme', next ? 'dark' : 'light')
+    return next
+  })
   useEffect(() => { document.title = t('landingPageTitle') }, [t, i18n.resolvedLanguage])
   const reducedMotion = useReducedMotion()
-  return <LazyMotion features={domAnimation}><motion.main className="landing-page" initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ duration:reducedMotion?0:0.45, ease:'easeOut' }}>
-    <Navbar />
+  return <LazyMotion features={domAnimation}><motion.main className={`landing-page${darkMode ? ' dark' : ''}`} initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ duration:reducedMotion?0:0.45, ease:'easeOut' }}>
+    <Navbar darkMode={darkMode} onToggleTheme={toggleTheme} />
     <Hero />
     <TrustedBy />
     <Steps />
