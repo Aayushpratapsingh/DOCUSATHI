@@ -1,4 +1,4 @@
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL || ''
 export type DocumentItem = {id:number; filename:string; file_type:string; processing_status:string; page_count:number; uploaded_at:string}
 export type Source = {chunk_id:number; page_number:number|null; text:string; score:number}
 export type Answer = {answer:string; sources:Source[]}

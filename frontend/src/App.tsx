@@ -9,7 +9,7 @@ import {
 } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, NavLink, useLocation, useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -45,6 +45,7 @@ import {
   UserProfile,
 } from "./api";
 import QuizFlashcardStudio from "./components/QuizFlashcardStudio";
+import LandingPage from "./components/LandingPage";
 
 function BrandSymbol() {
   return (
@@ -88,13 +89,21 @@ function BrandSymbol() {
   );
 }
 
-function AuthScreen({ onLogin }: { onLogin: () => void }) {
+function AuthScreen({
+  initialRegister = false,
+  onLogin,
+}: {
+  initialRegister?: boolean;
+  onLogin: () => void;
+}) {
   const { t, i18n } = useTranslation();
-  const [register, setRegister] = useState(false);
+  const navigate = useNavigate();
+  const [register, setRegister] = useState(initialRegister);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  useEffect(() => setRegister(initialRegister), [initialRegister]);
   const mutation = useMutation({
     mutationFn: () =>
       register
@@ -183,8 +192,10 @@ function AuthScreen({ onLogin }: { onLogin: () => void }) {
         <button
           className="link-button"
           onClick={() => {
-            setRegister(!register);
+            const nextRegister = !register;
+            setRegister(nextRegister);
             setError("");
+            navigate(nextRegister ? "/signup" : "/login");
           }}
         >
           {register ? t("hasAccount") : t("noAccount")}{" "}
@@ -302,6 +313,10 @@ function App() {
   const isProfile = location.pathname === "/profile";
   const isWorkspace = location.pathname === "/workspace";
   const isLibrary = location.pathname === "/documents";
+  const isLanding = location.pathname === "/";
+  const isAuthPage =
+    location.pathname === "/login" || location.pathname === "/signup";
+  const isPublicRoute = isLanding || isAuthPage;
   const routeStudyKind: StudyKind | null =
     location.pathname === "/study/quiz"
       ? "quiz"
@@ -353,49 +368,45 @@ function App() {
   const me = useQuery({
     queryKey: ["me"],
     queryFn: api.me,
-    enabled: signedIn,
+    enabled: signedIn && !isPublicRoute,
     retry: false,
   });
   const docs = useQuery({
     queryKey: ["documents"],
     queryFn: api.documents,
-    enabled: signedIn,
+    enabled: signedIn && !isPublicRoute,
     refetchInterval: 3000,
   });
   const recentChats = useQuery({
     queryKey: ["recentChats"],
     queryFn: api.recentChats,
-    enabled: signedIn,
+    enabled: signedIn && !isPublicRoute,
     refetchInterval: 10000,
   });
   const notes = useQuery({
     queryKey: ["notes"],
     queryFn: api.notes,
-    enabled: signedIn,
+    enabled: signedIn && !isPublicRoute,
   });
   const bookmarks = useQuery({
     queryKey: ["bookmarks"],
     queryFn: api.bookmarks,
-    enabled: signedIn,
+    enabled: signedIn && !isPublicRoute,
   });
   const messages = useQuery({
     queryKey: ["messages", selected],
     queryFn: () => api.messages(selected!),
-    enabled: signedIn && selected !== null,
+    enabled: signedIn && !isPublicRoute && selected !== null,
   });
   useEffect(() => {
-    if (me.isError) {
+    if (!isPublicRoute && me.isError) {
       localStorage.removeItem("docintel_token");
       setSignedIn(false);
     }
-  }, [me.isError]);
+  }, [isPublicRoute, me.isError]);
   useEffect(() => {
     document.documentElement.lang = i18n.resolvedLanguage ?? "en";
   }, [i18n.resolvedLanguage]);
-  useEffect(() => {
-    if (signedIn && location.pathname === "/")
-      navigate("/workspace", { replace: true });
-  }, [signedIn, location.pathname, navigate]);
   const upload = useMutation({
     mutationFn: api.upload,
     onSuccess: (doc) => {
@@ -505,9 +516,13 @@ function App() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["recentChats"] }),
     onError: (e: Error) => setError(e.message),
   });
-  if (!signedIn)
+  if (isLanding) return <LandingPage />;
+  if (isAuthPage && signedIn)
+    return <Navigate to="/workspace" replace />;
+  if (isAuthPage && !signedIn)
     return (
       <AuthScreen
+        initialRegister={location.pathname === "/signup"}
         onLogin={() => {
           setSignedIn(true);
           qc.invalidateQueries();
@@ -515,6 +530,7 @@ function App() {
         }}
       />
     );
+  if (!signedIn) return <Navigate to="/login" replace />;
   const allDocs = docs.data ?? [];
   const current = allDocs.find((d) => d.id === selected) ?? null;
   const visible = allDocs.filter((d) =>
