@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { AnimatePresence, LazyMotion, domAnimation, m as motion, useInView, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'motion/react'
 import { ArrowDown, ArrowRight, BookOpenText, Check, FileText, GraduationCap, Languages, Menu, MessageCircleQuestion, MessageSquareText, Microscope, Moon, PanelTop, Plus, ShieldCheck, Sparkles, Sun, Target, X } from 'lucide-react'
 import BrandSymbol from './BrandSymbol'
+import AnimatedBackground from './AnimatedBackground'
 import { FadeUp, FloatingCard, StaggerContainer, StaggerItem } from './animations'
 
 function BrandLockup() {
@@ -54,7 +55,14 @@ export function Hero() {
   const { t } = useTranslation()
   const reducedMotion = useReducedMotion()
   const headline = t('landingHeadline').split(/(\s+)/u).filter(Boolean)
-  return <section className="landing-hero" id="top">
+  const moveSpotlight = (event: PointerEvent<HTMLElement>) => {
+    if (reducedMotion || event.pointerType !== 'mouse' || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return
+    const bounds = event.currentTarget.getBoundingClientRect()
+    event.currentTarget.style.setProperty('--spotlight-x', `${((event.clientX - bounds.left) / bounds.width) * 100}%`)
+    event.currentTarget.style.setProperty('--spotlight-y', `${((event.clientY - bounds.top) / bounds.height) * 100}%`)
+  }
+  return <section className="landing-hero" id="top" onPointerMove={moveSpotlight}>
+    <AnimatedBackground variant="hero" />
     <motion.div className="landing-hero-pill" initial={{ opacity: 0, y: reducedMotion ? 0 : 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, ease: 'easeOut', delay: 0.12 }}><Sparkles size={14}/>{t('landingPill')}</motion.div>
     <h1 aria-label={t('landingHeadline')}>{headline.map((word, index) => <motion.span className="landing-headline-word" key={`${word}-${index}`} initial={{ opacity: 0, y: reducedMotion ? 0 : 16, filter: reducedMotion ? 'blur(0px)' : 'blur(4px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: reducedMotion ? 0 : 0.58, ease: 'easeOut', delay: reducedMotion ? 0 : 0.18 + index * 0.075 }}>{word}</motion.span>)}</h1>
     <motion.p initial={{ opacity: 0, y: reducedMotion ? 0 : 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reducedMotion ? 0 : 0.6, ease: 'easeOut', delay: reducedMotion ? 0 : 0.72 }}>{t('landingSubtitle')}</motion.p>
@@ -241,7 +249,7 @@ export function FAQ() {
 export function CTA() {
   const { t } = useTranslation()
   const reducedMotion = useReducedMotion()
-  return <motion.section className="landing-cta" id="support" initial={{ opacity:0, y:reducedMotion?0:18 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true, amount:0.2 }} transition={{ duration:reducedMotion?0:0.65, ease:'easeOut' }}><div className="landing-cta-spark"><Sparkles size={20}/></div><span>{t('landingCtaEyebrow')}</span><h2>{t('landingCtaHeading')}</h2><p>{t('landingCtaDescription')}</p><motion.div whileHover={reducedMotion?undefined:{scale:1.035}} whileTap={reducedMotion?undefined:{scale:0.97}}><Link className="landing-button light" to="/signup">{t('landingGetStarted')}<ArrowRight size={16}/></Link></motion.div></motion.section>
+  return <motion.section className="landing-cta" id="support" initial={{ opacity:0, y:reducedMotion?0:18 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true, amount:0.2 }} transition={{ duration:reducedMotion?0:0.65, ease:'easeOut' }}><AnimatedBackground variant="cta" /><div className="landing-cta-spark"><Sparkles size={20}/></div><span>{t('landingCtaEyebrow')}</span><h2>{t('landingCtaHeading')}</h2><p>{t('landingCtaDescription')}</p><motion.div whileHover={reducedMotion?undefined:{scale:1.035}} whileTap={reducedMotion?undefined:{scale:0.97}}><Link className="landing-button light" to="/signup">{t('landingGetStarted')}<ArrowRight size={16}/></Link></motion.div></motion.section>
 }
 
 export function Footer() {
@@ -261,6 +269,7 @@ export default function LandingPage() {
   useEffect(() => { document.title = t('landingPageTitle') }, [t, i18n.resolvedLanguage])
   const reducedMotion = useReducedMotion()
   return <LazyMotion features={domAnimation}><motion.main className={`landing-page${darkMode ? ' dark' : ''}`} initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ duration:reducedMotion?0:0.45, ease:'easeOut' }}>
+    <AnimatedBackground variant="page" />
     <Navbar darkMode={darkMode} onToggleTheme={toggleTheme} />
     <Hero />
     <TrustedBy />
