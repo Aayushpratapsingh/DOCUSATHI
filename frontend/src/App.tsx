@@ -520,6 +520,21 @@ function App() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["recentChats"] }),
     onError: (e: Error) => setError(e.message),
   });
+  useEffect(() => {
+    if (!selected || !messages.data?.length) return;
+    const params = new URLSearchParams(location.search);
+    const messageId = Number(params.get("message"));
+    const page = Number(params.get("page"));
+    if (!messageId) return;
+    const message = messages.data.find(
+      (item) => item.id === messageId && item.role === "assistant",
+    );
+    if (!message) return;
+    const sourceIndex = message.sources.findIndex((source) =>
+      page ? source.page_number === page : true,
+    );
+    if (sourceIndex >= 0) setSelectedSource({ messageId, index: sourceIndex });
+  }, [selected, location.search, messages.data]);
   if (isLanding) return <LandingPage />;
   if (isAuthPage && signedIn)
     return <Navigate to="/workspace" replace />;
@@ -578,21 +593,6 @@ function App() {
     if (text) params.set("reference", text.slice(0, 1200));
     navigate(`/documents/${documentId}${params.size ? `?${params}` : ""}`);
   };
-  useEffect(() => {
-    if (!selected || !messages.data?.length) return;
-    const params = new URLSearchParams(location.search);
-    const messageId = Number(params.get("message"));
-    const page = Number(params.get("page"));
-    if (!messageId) return;
-    const message = messages.data.find(
-      (item) => item.id === messageId && item.role === "assistant",
-    );
-    if (!message) return;
-    const sourceIndex = message.sources.findIndex((source) =>
-      page ? source.page_number === page : true,
-    );
-    if (sourceIndex >= 0) setSelectedSource({ messageId, index: sourceIndex });
-  }, [selected, location.search, messages.data]);
   const breadcrumb = isDocument ? (
     <>
       <button
