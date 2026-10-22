@@ -28,8 +28,7 @@ Run each service in its own terminal. Start the backend first.
 
 ```sh
 cd backend
-source .venv/bin/activate
-python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+./.venv/bin/python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 **Terminal 2 — frontend** (from the repository root):
