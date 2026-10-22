@@ -48,11 +48,46 @@ async def register(body: RegisterIn, db: AsyncSession = Depends(get_db)):
     db.add(user); await db.commit(); await db.refresh(user)
     return TokenOut(access_token=make_token(user.id))
 
+# @router.post("/auth/login", response_model=TokenOut)
+# async def login(body: LoginIn, db: AsyncSession = Depends(get_db)):
+#     user = await db.scalar(select(User).where(User.email == body.email.lower()))
+#     if not user or not verify_password(body.password, user.password_hash): raise HTTPException(401, "Email or password is incorrect")
+#     return TokenOut(access_token=make_token(user.id))
+import logging
+
+logger = logging.getLogger(__name__)
+
 @router.post("/auth/login", response_model=TokenOut)
 async def login(body: LoginIn, db: AsyncSession = Depends(get_db)):
-    user = await db.scalar(select(User).where(User.email == body.email.lower()))
-    if not user or not verify_password(body.password, user.password_hash): raise HTTPException(401, "Email or password is incorrect")
-    return TokenOut(access_token=make_token(user.id))
+    try:
+        email = body.email.strip().lower()
+
+        user = await db.scalar(
+            select(User).where(User.email == email)
+        )
+
+        if not user:
+            raise HTTPException(
+                status_code=401,
+                detail="Email or password is incorrect",
+            )
+
+        if not verify_password(body.password, user.password_hash):
+            raise HTTPException(
+                status_code=401,
+                detail="Email or password is incorrect",
+            )
+
+        return TokenOut(access_token=make_token(user.id))
+
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Unexpected error in /auth/login")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error during login",
+        )
 
 @router.get("/auth/me", response_model=UserOut)
 async def me(user: User = Depends(current_user)): return user

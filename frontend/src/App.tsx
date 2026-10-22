@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import {
   api,
+  ApiError,
   Bookmark,
   ChatMessage,
   DocumentItem,
@@ -94,7 +95,7 @@ function AuthScreen({
   onLogin,
 }: {
   initialRegister?: boolean;
-  onLogin: () => void;
+  onLogin: () => void | Promise<void>;
 }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -109,9 +110,9 @@ function AuthScreen({
       register
         ? api.register(name, email, password)
         : api.login(email, password),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       localStorage.setItem("docintel_token", data.access_token);
-      onLogin();
+      await onLogin();
     },
     onError: (e: Error) => setError(e.message),
   });
@@ -370,18 +371,21 @@ function App() {
     queryFn: api.me,
     enabled: signedIn && !isPublicRoute,
     retry: false,
+    staleTime: 30_000,
   });
   const docs = useQuery({
     queryKey: ["documents"],
     queryFn: api.documents,
     enabled: signedIn && !isPublicRoute,
     refetchInterval: 3000,
+    staleTime: 30_000,
   });
   const recentChats = useQuery({
     queryKey: ["recentChats"],
     queryFn: api.recentChats,
     enabled: signedIn && !isPublicRoute,
     refetchInterval: 10000,
+    staleTime: 30_000,
   });
   const notes = useQuery({
     queryKey: ["notes"],
@@ -399,11 +403,11 @@ function App() {
     enabled: signedIn && !isPublicRoute && selected !== null,
   });
   useEffect(() => {
-    if (!isPublicRoute && me.isError) {
+    if (!isPublicRoute && me.error instanceof ApiError && me.error.status === 401) {
       localStorage.removeItem("docintel_token");
       setSignedIn(false);
     }
-  }, [isPublicRoute, me.isError]);
+  }, [isPublicRoute, me.error]);
   useEffect(() => {
     document.documentElement.lang = i18n.resolvedLanguage ?? "en";
   }, [i18n.resolvedLanguage]);
@@ -523,9 +527,19 @@ function App() {
     return (
       <AuthScreen
         initialRegister={location.pathname === "/signup"}
-        onLogin={() => {
+        onLogin={async () => {
+          // Clear stale state from an earlier session, then prepare the workspace
+          // data before switching routes so the page does not appear empty.
+          qc.clear();
+          await Promise.allSettled([
+            qc.fetchQuery({ queryKey: ["me"], queryFn: api.me, staleTime: 30_000 }),
+            qc.fetchQuery({ queryKey: ["documents"], queryFn: api.documents, staleTime: 30_000 }),
+            qc.fetchQuery({ queryKey: ["recentChats"], queryFn: api.recentChats, staleTime: 30_000 }),
+          ]);
+          // Keep the auth route active until the initial workspace requests settle.
+          // Otherwise the signed-in guard redirects early and mounts the workspace
+          // while those same queries are still being prepared.
           setSignedIn(true);
-          qc.invalidateQueries();
           navigate("/workspace", { replace: true });
         }}
       />
